@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SimpleAtm.Tests/SimpleAtm.Tests.csproj" />
+  <Project Path="SimpleAtm/SimpleAtm.csproj" />
+</Solution>

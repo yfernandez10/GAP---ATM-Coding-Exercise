@@ -1,0 +1,114 @@
+@model Dashboard
+@{
+    string Usd(decimal value) => value.ToString("C2", CultureInfo.GetCultureInfo("en-US"));
+    var latest = Model.Entries.FirstOrDefault();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simple ATM</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/bootstrap.min.css" asp-append-version="true">
+</head>
+<body class="bg-body-tertiary">
+<main class="container py-4">
+    <header class="d-flex flex-wrap justify-content-between gap-2 border-bottom pb-3 mb-4">
+        <strong>Simple ATM</strong>
+        <span class="text-body-secondary">Personal accounts · USD</span>
+    </header>
+    <h1 class="mb-3">Your accounts</h1>
+    <section class="row g-3 mb-4" aria-label="Current balances">
+        <div class="col-12 col-md-6">
+            <article class="card card-body h-100 text-bg-success">
+                <h2 class="h6">Checking</h2>
+                <p class="fs-3 text-break mb-0"><b>@Usd(latest?.CheckingAfter ?? 0m)</b></p>
+            </article>
+        </div>
+        <div class="col-12 col-md-6">
+            <article class="card card-body h-100 bg-success-subtle text-success-emphasis">
+                <h2 class="h6">Savings</h2>
+                <p class="fs-3 text-break mb-0"><b>@Usd(latest?.SavingsAfter ?? 0m)</b></p>
+            </article>
+        </div>
+    </section>
+    <section class="card card-body mb-4">
+        <h2 class="h4 mb-3">New transaction</h2>
+        @if (TempData["Notice"] is string notice)
+        {
+            <p class="alert alert-success" role="status">@notice</p>
+        }
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+        }
+        <form asp-action="Submit" method="post" class="row g-3 align-items-end">
+            <input type="hidden" asp-for="Form.RequestId">
+            <div class="col-sm-6 col-lg">
+                <label asp-for="Form.ActionType" class="form-label">Operation</label>
+                <select data-transfer-value="@((int)Operation.Transfer)" asp-for="Form.ActionType" asp-items="Html.GetEnumSelectList<Operation>()" class="form-select"></select>
+            </div>
+            <div class="col-sm-6 col-lg">
+                <label id="account-label" asp-for="Form.SelectedAccount" class="form-label">Account</label>
+                <select asp-for="Form.SelectedAccount" asp-items="Html.GetEnumSelectList<Account>()" class="form-select"></select>
+            </div>
+            <div id="destination-field" class="col-sm-6 col-lg">
+                <label asp-for="Form.DestinationAccount" class="form-label">To account</label>
+                <select asp-for="Form.DestinationAccount" asp-items="Html.GetEnumSelectList<Account>()" class="form-select">
+                    <option value="">Choose account</option>
+                </select>
+            </div>
+            <div class="col-sm-6 col-lg">
+                <label asp-for="Form.Amount" class="form-label">Amount (USD)</label>
+                <input asp-for="Form.Amount" class="form-control" type="text" inputmode="decimal" required placeholder="0.00" maxlength="18">
+            </div>
+            <div class="col-sm-6 col-lg d-grid">
+                <button type="submit" class="btn btn-success">Submit transaction</button>
+            </div>
+        </form>
+        <noscript><small>For a transfer, use Account as the source and choose a different To account.</small></noscript>
+    </section>
+    <section class="card card-body">
+        <h2 class="h4 mb-3">Transaction history</h2>
+        @if (latest is null)
+        {
+            <p class="text-body-secondary mb-0">Your history is empty. Make a deposit to get started.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle text-nowrap mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Time (UTC)</th>
+                            <th scope="col">Operation</th>
+                            <th scope="col">Account</th>
+                            <th scope="col" class="text-end">Amount</th>
+                            <th scope="col" class="text-end">Checking after</th>
+                            <th scope="col" class="text-end">Savings after</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var entry in Model.Entries)
+                    {
+                        var account = entry.Transaction.Account.ToString();
+                        if (entry.Transaction.Operation == Operation.Transfer)
+                            account += $" → {entry.Transaction.DestinationAccount}";
+                        <tr>
+                            <td>@entry.When.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@entry.Transaction.Operation</td>
+                            <td>@account</td>
+                            <td class="text-end">@Usd(entry.Transaction.Amount)</td>
+                            <td class="text-end">@Usd(entry.CheckingAfter)</td>
+                            <td class="text-end">@Usd(entry.SavingsAfter)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</main>
+    <script src="~/transfer-form.js" asp-append-version="true"></script>
+</body>
+</html>
